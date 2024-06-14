@@ -1,0 +1,39 @@
+{
+  "name": "@wry-smile/vite-plugin-svg-icon",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./dist/main.mjs",
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup"
+  },
+  "types": "./dist/main.d.mts",
+  "exports": {
+    ".": {
+      "import": "./dist/main.mjs",
+      "types": "./dist/main.d.mts"
+    }
+  },
+  "files": [
+    "dist",
+    "client.d.ts"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@iconify/utils": "^2.1.24",
+    "chalk": "^5.3.0",
+    "fast-glob": "^3.3.2"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^2.21.1",
+    "@types/node": "^20.14.2",
+    "eslint": "^8.57.0",
+    "typescript": "^5.2.2",
+    "tsup": "^8.1.0"
+  },
+  "peerDependencies": {
+    "@iconify/json": "^2.2.218"
+  }
+}
