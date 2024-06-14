@@ -5,7 +5,8 @@
   "main": "./dist/main.mjs",
   "scripts": {
     "dev": "tsup --watch",
-    "build": "tsup"
+    "build": "tsup",
+    "release": "npm run build"
   },
   "types": "./dist/main.d.mts",
   "exports": {
