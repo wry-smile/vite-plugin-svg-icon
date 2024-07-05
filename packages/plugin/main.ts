@@ -30,13 +30,13 @@ export function SvgIconPlugin(opt: PluginOptions): Plugin {
     async load(id) {
       const { code, ids, idSets } = await complierIcons(options)
       if (id === SVG_ICONS_REGISTER_NAME_ID) {
+        createDtsFile(idSets, options)
         return {
           code,
         }
       }
 
       if (id === SVG_ICONS_NAMES_ID) {
-        createDtsFile(idSets, options)
         return {
           code: ids,
         }
