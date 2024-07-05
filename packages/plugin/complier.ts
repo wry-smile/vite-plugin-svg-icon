@@ -1,17 +1,20 @@
-import { extname } from 'path'
+import { extname } from 'node:path'
+import { readFile, writeFile } from 'node:fs/promises'
 import fg from 'fast-glob'
-import { readFile, writeFile } from 'fs/promises'
-import { DomInject, PluginOptions } from "./types"
-import { ParsedSVGContent, parseSVGContent } from '@iconify/utils'
+import type { ParsedSVGContent } from '@iconify/utils'
+import { parseSVGContent } from '@iconify/utils'
+import { transform } from '@svgr/core'
+import svgo from '@svgr/plugin-svgo'
+import type { DomInject, PluginOptions } from './types'
 import { error } from './utils'
 import { NAMES_TYPE_NAME, XMLNS, XMLNS_LINK } from './constant'
 
 function normalizePath(inputPath: string) {
-  return inputPath.replace(/\\/g, '/');
+  return inputPath.replace(/\\/g, '/')
 }
 
 async function getSymbolName(path: string, dir: string, options: PluginOptions) {
-  const relativeName = normalizePath(path).replace(normalizePath(dir + '/'), '')
+  const relativeName = normalizePath(path).replace(normalizePath(`${dir}/`), '')
   const symbolId = createSymbolId(relativeName, options)
   return symbolId
 }
@@ -26,12 +29,11 @@ export async function complierIcons(options: PluginOptions) {
     const svgStats = fg.sync('**/*.svg', {
       cwd: dir,
       stats: true,
-      absolute: true
+      absolute: true,
     })
 
-
     for (const entry of svgStats) {
-      const { path, } = entry
+      const { path } = entry
       const symbolId = await getSymbolName(path, dir, options)
       const symbol = await complierIcon(path, symbolId)
       symbols += symbol
@@ -48,15 +50,37 @@ export async function complierIcons(options: PluginOptions) {
   return {
     code: `${code}\nexport default {}`,
     idSets: Array.from(idSets),
-    ids: `export default ${JSON.stringify(Array.from(idSets))}`
+    ids: `export default ${JSON.stringify(Array.from(idSets))}`,
   }
 }
 
-
 async function complierIcon(file: string, symbolId: string) {
-  if (!file) return null
+  if (!file)
+    return null
 
   let content = await readFile(file, 'utf-8')
+
+  content = transform.sync(
+    content,
+    {
+      icon: '1em',
+      plugins: [
+        svgo,
+      ],
+      svgoConfig: {
+        plugins: [
+          {
+            name: 'prefixIds',
+            params: {
+              prefix: `${symbolId}`,
+              prefixIds: true,
+              prefixClassNames: true,
+            },
+          },
+        ],
+      },
+    },
+  )
 
   const parser = parseSVGContent(content)
 
@@ -73,7 +97,8 @@ function transformToSvgSymbol(symbolId: string, parser: ParsedSVGContent) {
 }
 
 function createSymbolId(name: string, { symbolId }: PluginOptions) {
-  if (!symbolId) return name.replace(extname(name), '')
+  if (!symbolId)
+    return name.replace(extname(name), '')
 
   let id = symbolId
   let fName = name
@@ -90,14 +115,13 @@ function createSymbolId(name: string, { symbolId }: PluginOptions) {
 
   id = id.replace(/\[name\]/g, fName)
   return id.replace(extname(id), '')
-
 }
 
 function parseName(name: string) {
   if (!normalizePath(name).includes('/')) {
     return {
       fileName: name,
-      dirName: ''
+      dirName: '',
     }
   }
 
@@ -106,11 +130,11 @@ function parseName(name: string) {
   const dirName = strList.join('-')
   return {
     fileName,
-    dirName
+    dirName,
   }
 }
 
-const createModuleCode = (string: string, { customDomId, inject }: PluginOptions,) => {
+function createModuleCode(string: string, { customDomId, inject }: PluginOptions) {
   return `
          if (typeof window !== 'undefined') {
          function loadSvg() {
@@ -147,11 +171,11 @@ function domInject(inject: DomInject = 'body-last') {
   }
 }
 
-
-export async function createDtsFile(names: string[], options: PluginOptions,) {
+export async function createDtsFile(names: string[], options: PluginOptions) {
   const { dts } = options
 
-  if (!dts) return
+  if (!dts)
+    return
 
   const code = `declare global {\n  type ${NAMES_TYPE_NAME} = ${names.map(item => `'${item}'`).join(' | ')}\n}\nexport {}`
   await writeFile(dts, code, 'utf-8')

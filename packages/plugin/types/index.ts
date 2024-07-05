@@ -1,4 +1,3 @@
-
 export interface PluginOptions {
   iconDirs?: string[] | string
   symbolId?: string

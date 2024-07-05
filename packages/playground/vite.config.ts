@@ -11,7 +11,7 @@ export default defineConfig({
     SvgIconPlugin({
       dts: './types/svg-icon.d.ts',
       iconDirs: [
-        join(cwd(), './src/assets/icons')
+        join(cwd(), './src/assets/icons/test')
       ],
       // registerFormIconify: {
       //   'fa6-regular': ['circle-check', 'chess-bishop', 'file-video']
