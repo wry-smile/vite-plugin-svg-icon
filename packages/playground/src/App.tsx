@@ -22,6 +22,9 @@ function App() {
       <svg>
         <use xlinkHref='#icon-icon6'></use>
       </svg>
+      <svg>
+        <use xlinkHref='#icon-icon12'></use>
+      </svg>
       <Icon icon="fa:check" />
       <Icon icon="fa:reddit" />
       <Icon icon="ant-design:check-circle-outlined" />

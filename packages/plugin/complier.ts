@@ -35,7 +35,7 @@ export async function complierIcons(options: PluginOptions) {
     for (const entry of svgStats) {
       const { path } = entry
       const symbolId = await getSymbolName(path, dir, options)
-      const symbol = await complierIcon(path, symbolId)
+      const symbol = await complierIcon(path, symbolId, options)
       symbols += symbol
       idSets.add(symbolId)
     }
@@ -54,7 +54,7 @@ export async function complierIcons(options: PluginOptions) {
   }
 }
 
-async function complierIcon(file: string, symbolId: string) {
+async function complierIcon(file: string, symbolId: string, _options: PluginOptions) {
   if (!file)
     return null
 

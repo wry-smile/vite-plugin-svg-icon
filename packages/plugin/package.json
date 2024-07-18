@@ -22,9 +22,6 @@
     "build": "tsup",
     "release": "npm run build"
   },
-  "peerDependencies": {
-    "@iconify/json": "^2.2.218"
-  },
   "dependencies": {
     "@iconify/utils": "^2.1.24",
     "@svgr/core": "^8.1.0",

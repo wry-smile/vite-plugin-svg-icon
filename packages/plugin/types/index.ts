@@ -1,10 +1,12 @@
+import type { Config } from '@svgr/core'
+
 export interface PluginOptions {
   iconDirs?: string[] | string
   symbolId?: string
   inject?: DomInject
   customDomId?: string
   dts?: string
-  registerFormIconify?: IconifyRegisterType
+  svgo?: boolean | Config['svgoConfig']
 }
 
 export type DomInject = 'body-last' | 'body-first'
