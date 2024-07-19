@@ -9,7 +9,7 @@
     "dev:plugin": "cd ./packages/plugin && pnpm dev",
     "dev:playground": "cd ./packages/playground && pnpm dev",
     "build": "cd ./packages/plugin && pnpm build",
-    "release": "pnpm build && releaseKit && pnpm publish -r --access=public"
+    "release": "cd ./packages/plugin && pnpm release"
   },
   "keywords": [],
   "author": "",

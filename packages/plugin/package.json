@@ -1,6 +1,6 @@
 {
   "name": "@wry-smile/vite-plugin-svg-icon",
-  "version": "1.2.0",
+  "version": "1.1.0",
   "description": "",
   "author": "",
   "license": "MIT",
@@ -20,7 +20,7 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "release": "pnpm build && releaseKit && pnpm publish--access=public"
+    "release": "pnpm build && releaseKit && pnpm publish --access=public"
   },
   "dependencies": {
     "@iconify/utils": "^2.1.24",
