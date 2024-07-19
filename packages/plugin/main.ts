@@ -1,3 +1,4 @@
+import { dirname, normalize, relative } from 'node:path'
 import type { Plugin } from 'vite'
 import { name } from './package.json'
 import { DefaultOptions, SVG_ICONS_NAMES, SVG_ICONS_NAMES_ID, SVG_ICONS_REGISTER_NAME, SVG_ICONS_REGISTER_NAME_ID } from './constant'
@@ -28,15 +29,18 @@ export function SvgIconPlugin(opt: PluginOptions): Plugin {
       }
     },
     async load(id) {
-      const { code, ids, idSets } = await complierIcons(options)
       if (id === SVG_ICONS_REGISTER_NAME_ID) {
+        const { code, idSets } = await complierIcons(options)
         createDtsFile(idSets, options)
+
         return {
           code,
         }
       }
 
       if (id === SVG_ICONS_NAMES_ID) {
+        const { ids } = await complierIcons(options)
+
         return {
           code: ids,
         }

@@ -9,6 +9,8 @@ import type { DomInject, PluginOptions } from './types'
 import { error } from './utils'
 import { NAMES_TYPE_NAME, XMLNS, XMLNS_LINK } from './constant'
 
+const cache = new Map<string, Record<'symbol' | 'symbolId', string>>()
+
 function normalizePath(inputPath: string) {
   return inputPath.replace(/\\/g, '/')
 }
@@ -21,7 +23,6 @@ async function getSymbolName(path: string, dir: string, options: PluginOptions) 
 
 export async function complierIcons(options: PluginOptions) {
   const { iconDirs = [] } = options
-
   let symbols = ''
   const idSets = new Set<string>()
 
@@ -34,16 +35,31 @@ export async function complierIcons(options: PluginOptions) {
 
     for (const entry of svgStats) {
       const { path } = entry
-      const symbolId = await getSymbolName(path, dir, options)
-      const symbol = await complierIcon(path, symbolId, options)
+      let symbolId: string
+      let symbol: null | string
+      const res = cache.get(path)
+      if (res) {
+        const { symbol: cacheSymbol, symbolId: cacheSymbolId } = res
+        symbolId = cacheSymbolId
+        symbol = cacheSymbol
+      }
+      else {
+        symbolId = await getSymbolName(path, dir, options)
+        symbol = await complierIcon(path, symbolId, options)
+      }
+
+      if (!symbol)
+        continue
+
       symbols += symbol
       idSets.add(symbolId)
+
+      cache.set(path, {
+        symbol,
+        symbolId,
+      })
     }
   }
-
-  // const iconifySymbols = await loadIconifyFormRegister(options)
-
-  // symbols += iconifySymbols
 
   const code = createModuleCode(symbols, options)
 
