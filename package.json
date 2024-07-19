@@ -8,7 +8,8 @@
     "dev": "pnpm dev:plugin",
     "dev:plugin": "cd ./packages/plugin && pnpm dev",
     "dev:playground": "cd ./packages/playground && pnpm dev",
-    "release": "pnpm -r release && releaseKit ./packages/plugin && pnpm publish -r --access=public"
+    "build": "cd ./packages/plugin && pnpm build",
+    "release": "pnpm build && releaseKit && pnpm publish -r --access=public"
   },
   "keywords": [],
   "author": "",
