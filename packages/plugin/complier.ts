@@ -1,11 +1,9 @@
 import { extname } from 'node:path'
 import { readFile, writeFile } from 'node:fs/promises'
 import fg from 'fast-glob'
-import type { ParsedSVGContent } from '@iconify/utils'
-import { parseSVGContent } from '@iconify/utils'
-import { transform } from '@svgr/core'
-import svgo from '@svgr/plugin-svgo'
-import type { DomInject, PluginOptions } from './types'
+import type { Config } from 'svgo'
+import { optimize } from 'svgo'
+import type { DomInject, ParsedSVGContent, PluginOptions } from './types'
 import { error } from './utils'
 import { NAMES_TYPE_NAME, XMLNS, XMLNS_LINK } from './constant'
 
@@ -22,7 +20,9 @@ async function getSymbolName(path: string, dir: string, options: PluginOptions) 
 }
 
 export async function complierIcons(options: PluginOptions) {
-  const { iconDirs = [] } = options
+  let { iconDirs = [] } = options
+
+  iconDirs = Array.isArray(iconDirs) ? iconDirs : [iconDirs]
   let symbols = ''
   const idSets = new Set<string>()
 
@@ -70,33 +70,39 @@ export async function complierIcons(options: PluginOptions) {
   }
 }
 
-async function complierIcon(file: string, symbolId: string, _options: PluginOptions) {
+async function complierIcon(file: string, symbolId: string, options: PluginOptions) {
   if (!file)
     return null
 
+  const { svgo: svgConfig } = options
+
   let content = await readFile(file, 'utf-8')
 
-  content = transform.sync(
-    content,
-    {
-      icon: '1em',
-      plugins: [
-        svgo,
-      ],
-      svgoConfig: {
-        plugins: [
-          {
-            name: 'prefixIds',
-            params: {
-              prefix: `${symbolId}`,
-              prefixIds: true,
-              prefixClassNames: true,
-            },
-          },
-        ],
+  let defaultConfig: Config | undefined = {
+    plugins: [
+      {
+        name: 'prefixIds',
+        params: {
+          prefix: symbolId,
+          prefixIds: true,
+          prefixClassNames: true,
+        },
       },
-    },
-  )
+    ],
+  }
+
+  if (typeof svgConfig === 'boolean') {
+    if (!svgConfig) {
+      defaultConfig = undefined
+    }
+  }
+  else {
+    if (typeof svgConfig === 'object') {
+      defaultConfig = svgConfig
+    }
+  }
+
+  content = optimize(content, defaultConfig).data
 
   const parser = parseSVGContent(content)
 
@@ -188,11 +194,43 @@ function domInject(inject: DomInject = 'body-last') {
 }
 
 export async function createDtsFile(names: string[], options: PluginOptions) {
-  const { dts } = options
+  let { dts = true } = options
 
-  if (!dts)
+  if (!dts || !names || !names?.length)
     return
 
-  const code = `declare global {\n  type ${NAMES_TYPE_NAME} = ${names.map(item => `'${item}'`).join(' | ')}\n}\nexport {}`
+  dts = typeof dts === 'boolean' ? '.' : dts
+
+  const code = `declare module 'virtual:register-svg-icons' {\n  const component: object\n  export default component\n}\n\ndeclare module 'virtual:svg-icons-names' {\n  export type ${NAMES_TYPE_NAME} = ${names.map(name => `'${name}'`).join(' | ')}\n\n  const iconsNames: ${NAMES_TYPE_NAME}[]\n  export default iconsNames\n}
+  `
+
   await writeFile(dts, code, 'utf-8')
+}
+
+export function parseSVGContent(content: string): ParsedSVGContent | undefined {
+  // Split SVG attributes and body
+  const match = content
+    .trim()
+    .match(
+      /(?:<(?:\?xml|!DOCTYPE)[^>]+>\s*)*<svg([^>]+)>([\s\S]+)<\/svg[^>]*>/,
+    )
+  if (!match) {
+    return
+  }
+  const body = match[2].trim()
+
+  // Split attributes
+  const attribsList = match[1].match(/[\w:-]+="[^"]*"/g)
+  const attribs = Object.create(null) as Record<string, string>
+  attribsList?.forEach((row) => {
+    const match = row.match(/([\w:-]+)="([^"]*)"/)
+    if (match) {
+      attribs[match[1]] = match[2]
+    }
+  })
+
+  return {
+    attribs,
+    body,
+  }
 }

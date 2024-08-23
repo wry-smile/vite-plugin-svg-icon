@@ -1,4 +1,3 @@
-import { dirname, normalize, relative } from 'node:path'
 import type { Plugin } from 'vite'
 import { name } from './package.json'
 import { DefaultOptions, SVG_ICONS_NAMES, SVG_ICONS_NAMES_ID, SVG_ICONS_REGISTER_NAME, SVG_ICONS_REGISTER_NAME_ID } from './constant'
@@ -6,6 +5,41 @@ import type { PluginOptions } from './types'
 import { error } from './utils'
 import { complierIcons, createDtsFile } from './complier'
 
+/**
+ * @description
+ * @param {PluginOptions} opt - Svg Icon Plugin configuration options
+ * @returns {Plugin}
+ *
+ * @Usage
+ * ```ts
+ * // append this in main.ts
+ *
+ * // import svg symbol
+ * import 'virtual:register-svg-icons'
+ *
+ * // svg name
+ * import iconName 'virtual:svg-icons-names'
+ * ```
+ *
+ * ```ts
+ * // append this to vite.config.ts
+ * import { SvgIconPlugin } from '@wry-smile/vite-plugin-svg-icon'
+ *
+ * export default defineConfig({
+ *   plugins: [
+ *     react(),
+ *     SvgIconPlugin({
+ *       symbolId: 'icon-[dir]-[name]',
+ *       dts: './types/svg-icon.d.ts',
+ *       iconDirs: [
+ *         join(cwd(), './src/assets/icons')
+ *       ],
+ *     })
+ *   ],
+ * })
+ *
+ * ```
+ */
 export function SvgIconPlugin(opt: PluginOptions): Plugin {
   const options: PluginOptions = {
     ...DefaultOptions,

@@ -14,5 +14,4 @@ export const DefaultOptions: PluginOptions = {
   inject: 'body-last',
   customDomId: SVG_DOM_ID,
   dts: './svg-icon.d.ts',
-  registerFormIconify: {},
 }
