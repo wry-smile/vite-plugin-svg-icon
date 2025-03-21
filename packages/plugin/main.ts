@@ -1,13 +1,14 @@
 import type { Plugin } from 'vite'
-import { name } from './package.json'
-import { DefaultOptions, SVG_ICONS_NAMES, SVG_ICONS_NAMES_ID, SVG_ICONS_REGISTER_NAME, SVG_ICONS_REGISTER_NAME_ID } from './constant'
-import type { PluginOptions } from './types'
-import { error } from './utils'
+import type { PluginOption } from './types'
+import { isArray } from '@wry-smile/utils'
 import { complierIcons, createDtsFile } from './complier'
+import { DefaultOptions, SVG_ICONS_NAMES, SVG_ICONS_NAMES_ID, SVG_ICONS_REGISTER_NAME, SVG_ICONS_REGISTER_NAME_ID } from './constant'
+import { name } from './package.json'
+import { error } from './utils'
 
 /**
  * @description
- * @param {PluginOptions} opt - Svg Icon Plugin configuration options
+ * @param {PluginOption} opt - Svg Icon Plugin configuration options
  * @returns {Plugin}
  *
  * @Usage
@@ -30,7 +31,6 @@ import { complierIcons, createDtsFile } from './complier'
  *     react(),
  *     SvgIconPlugin({
  *       symbolId: 'icon-[dir]-[name]',
- *       dts: './types/svg-icon.d.ts',
  *       iconDirs: [
  *         join(cwd(), './src/assets/icons')
  *       ],
@@ -40,15 +40,12 @@ import { complierIcons, createDtsFile } from './complier'
  *
  * ```
  */
-export function SvgIconPlugin(opt: PluginOptions): Plugin {
-  const options: PluginOptions = {
-    ...DefaultOptions,
-    ...opt,
-  }
+export function SvgIconPlugin(opt: PluginOption[] | PluginOption, dts: boolean | string = false): Plugin {
+  const options: PluginOption[] = isArray(opt)
+    ? opt.map(item => Object.assign({}, DefaultOptions, item))
+    : [Object.assign({}, DefaultOptions, opt)]
 
-  const { symbolId } = options
-
-  if (!symbolId?.includes('[name]')) {
+  if (!options.every(item => item.symbolId?.includes('[name]'))) {
     error('SymbolId must contain [name] string!')
   }
 
@@ -64,20 +61,21 @@ export function SvgIconPlugin(opt: PluginOptions): Plugin {
     },
     async load(id) {
       if (id === SVG_ICONS_REGISTER_NAME_ID) {
-        const { code, idSets } = await complierIcons(options)
-        createDtsFile(idSets, options)
-
-        return {
-          code,
+        const { code, namesArray } = await complierIcons(options)
+        try {
+          createDtsFile(namesArray, dts)
         }
+        catch (e) {
+          error((e as Error)?.toString())
+        }
+
+        return code
       }
 
       if (id === SVG_ICONS_NAMES_ID) {
-        const { ids } = await complierIcons(options)
+        const { names } = await complierIcons(options)
 
-        return {
-          code: ids,
-        }
+        return names
       }
     },
   }

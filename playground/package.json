@@ -1,0 +1,23 @@
+{
+  "name": "playground",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@wry-smile/vite-plugin-svg-icon": "workspace:^",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/tsconfig": "^0.7.0",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vue-tsc": "^2.2.4",
+    "@types/node": "catalog:"
+  }
+}

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "pnpm dev:plugin",
     "dev:plugin": "cd ./packages/plugin && pnpm dev",
-    "dev:playground": "cd ./packages/playground && pnpm dev",
+    "dev:playground": "cd ./playground && pnpm dev",
     "build": "cd ./packages/plugin && pnpm build",
     "release": "cd ./packages/plugin && pnpm release"
   },
@@ -15,7 +15,10 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@antfu/eslint-config": "^4.10.2",
     "@wry-smile/release-kit": "^1.1.0",
-    "vite": "^5.2.13"
+    "eslint": "^9.22.0",
+    "eslint-plugin-format": "^1.0.1",
+    "vite": "^6.2.2"
   }
 }

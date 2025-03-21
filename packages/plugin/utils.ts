@@ -6,17 +6,17 @@ export function log(msg: string) {
 }
 
 export function error(msg: string) {
-  log(`${chalk.blueBright(MESSAGE_TITLE)} ${chalk.red(msg)}`)
+  log(`[${chalk.blueBright(MESSAGE_TITLE)}]: ${chalk.red(msg)}`)
 }
 
 export function info(msg: string) {
-  log(`${chalk.blueBright(MESSAGE_TITLE)} ${chalk.blue(msg)}`)
+  log(`[${chalk.blueBright(MESSAGE_TITLE)}]: ${chalk.blue(msg)}`)
 }
 
 export function warning(msg: string) {
-  log(`${chalk.blueBright(MESSAGE_TITLE)} ${chalk.yellow(msg)}`)
+  log(`[${chalk.blueBright(MESSAGE_TITLE)}]: ${chalk.yellow(msg)}`)
 }
 
 export function success(msg: string) {
-  log(`${chalk.blueBright(MESSAGE_TITLE)} ${chalk.green(msg)}`)
+  log(`[${chalk.blueBright(MESSAGE_TITLE)}]: ${chalk.green(msg)}`)
 }

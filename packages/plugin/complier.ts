@@ -1,11 +1,14 @@
-import { extname } from 'node:path'
-import { readFile, writeFile } from 'node:fs/promises'
-import fg from 'fast-glob'
+import type { ParsedSVGContent } from '@iconify/utils'
 import type { Config } from 'svgo'
+import type { ItemOptionResult, PluginOption } from './types'
+import { readFile, writeFile } from 'node:fs/promises'
+import { extname } from 'node:path'
+import { parseSVGContent } from '@iconify/utils'
+import { isArray, randomHexString } from '@wry-smile/utils'
+import fg from 'fast-glob'
 import { optimize } from 'svgo'
-import type { DomInject, ParsedSVGContent, PluginOptions } from './types'
+import { DEFAULT_DTS_GEN_PATH, NAMES_TYPE_NAME, SVG_DOM_ID, XMLNS, XMLNS_LINK } from './constant'
 import { error } from './utils'
-import { NAMES_TYPE_NAME, XMLNS, XMLNS_LINK } from './constant'
 
 const cache = new Map<string, Record<'symbol' | 'symbolId', string>>()
 
@@ -13,20 +16,43 @@ function normalizePath(inputPath: string) {
   return inputPath.replace(/\\/g, '/')
 }
 
-async function getSymbolName(path: string, dir: string, options: PluginOptions) {
+async function getSymbolName(path: string, dir: string, options: PluginOption) {
   const relativeName = normalizePath(path).replace(normalizePath(`${dir}/`), '')
   const symbolId = createSymbolId(relativeName, options)
   return symbolId
 }
 
-export async function complierIcons(options: PluginOptions) {
-  let { iconDirs = [] } = options
+export async function complierIcons(options: PluginOption[]) {
+  const ret: (ItemOptionResult & { option: PluginOption })[] = []
+  for (const option of options) {
+    const res = await complierItemOption(option)
+    ret.push(Object.assign(res, { option }))
+  }
 
-  iconDirs = Array.isArray(iconDirs) ? iconDirs : [iconDirs]
+  const names = ret.reduce((prev, next) => {
+    return [...prev, ...next.names]
+  }, [] as string[])
+
+  const code = createModuleCode(ret)
+
+  return {
+    code: `${code}\nexport default {}`,
+    namesArray: Array.from(names),
+    names: `export default ${JSON.stringify(Array.from(names))}`,
+  }
+}
+
+async function complierItemOption(option: PluginOption): Promise<ItemOptionResult> {
+  let { iconDirs } = option
+  iconDirs = isArray(iconDirs) ? iconDirs : [iconDirs!]
+
   let symbols = ''
-  const idSets = new Set<string>()
+  const names = new Set<string>()
 
   for (const dir of iconDirs) {
+    if (!iconDirs)
+      continue
+
     const svgStats = fg.sync('**/*.svg', {
       cwd: dir,
       stats: true,
@@ -44,15 +70,15 @@ export async function complierIcons(options: PluginOptions) {
         symbol = cacheSymbol
       }
       else {
-        symbolId = await getSymbolName(path, dir, options)
-        symbol = await complierIcon(path, symbolId, options)
+        symbolId = await getSymbolName(path, dir, option)
+        symbol = await complierIcon(path, symbolId, option)
       }
 
       if (!symbol)
         continue
 
       symbols += symbol
-      idSets.add(symbolId)
+      names.add(symbolId)
 
       cache.set(path, {
         symbol,
@@ -61,16 +87,18 @@ export async function complierIcons(options: PluginOptions) {
     }
   }
 
-  const code = createModuleCode(symbols, options)
-
   return {
-    code: `${code}\nexport default {}`,
-    idSets: Array.from(idSets),
-    ids: `export default ${JSON.stringify(Array.from(idSets))}`,
+    symbols,
+    names: Array.from(names),
   }
+  // return {
+  //   code: `${code}\nexport default {}`,
+  //   idSets: Array.from(idSets),
+  //   ids: `export default ${JSON.stringify(Array.from(idSets))}`,
+  // }
 }
 
-async function complierIcon(file: string, symbolId: string, options: PluginOptions) {
+async function complierIcon(file: string, symbolId: string, options: PluginOption) {
   if (!file)
     return null
 
@@ -118,7 +146,7 @@ function transformToSvgSymbol(symbolId: string, parser: ParsedSVGContent) {
   return `<symbol id="${symbolId}" viewBox="${viewBox}">${body}</symbol>`
 }
 
-function createSymbolId(name: string, { symbolId }: PluginOptions) {
+function createSymbolId(name: string, { symbolId }: PluginOption) {
   if (!symbolId)
     return name.replace(extname(name), '')
 
@@ -156,81 +184,90 @@ function parseName(name: string) {
   }
 }
 
-function createModuleCode(string: string, { customDomId, inject }: PluginOptions) {
+function createModuleCode(params: (ItemOptionResult & { option: PluginOption })[]) {
+  const nameSet = new Set<string>()
+
+  const executors = params.reduce((prev, next, index) => {
+    const { symbols, option: { inject } } = next
+    let { option: { customDomId = SVG_DOM_ID } } = next
+
+    if (nameSet.has(customDomId)) {
+      customDomId = customDomId + index
+    }
+
+    nameSet.add(customDomId)
+
+    return `${prev};loadSvg('${customDomId}', ${JSON.stringify(symbols)}, '${inject}')`
+  }, '')
+
   return `
-         if (typeof window !== 'undefined') {
-         function loadSvg() {
-           var body = document.body;
-           var svgDom = document.getElementById('${customDomId}');
-           if(!svgDom) {
-             svgDom = document.createElementNS('${XMLNS}', 'svg');
-             svgDom.style.position = 'absolute';
-             svgDom.style.width = '0';
-             svgDom.style.height = '0';
-             svgDom.id = '${customDomId}';
-             svgDom.setAttribute('xmlns','${XMLNS}');
-             svgDom.setAttribute('xmlns:link','${XMLNS_LINK}');
-             svgDom.setAttribute('aria-hidden',true);
-           }
-           svgDom.innerHTML = ${JSON.stringify(string)};
-           ${domInject(inject)}
-         }
-         if(document.readyState === 'loading') {
-           document.addEventListener('DOMContentLoaded', loadSvg);
-         } else {
-           loadSvg()
-         }
-      }
+if (typeof window !== 'undefined') {
+  function loadSvg(customDomId, content, inject) {
+    const body = document.body
+    let svgDom = document.getElementById(customDomId)
+    if (!svgDom) {
+      svgDom = document.createElementNS('${XMLNS}', 'svg')
+      svgDom.style.position = 'absolute'
+      svgDom.style.width = '0'
+      svgDom.style.height = '0'
+      svgDom.id = customDomId
+      svgDom.setAttribute('xmlns', '${XMLNS}')
+      svgDom.setAttribute('xmlns:link', '${XMLNS_LINK}')
+      svgDom.setAttribute('aria-hidden', true)
+    }
+    svgDom.innerHTML = content
+    if (inject === 'body-first') {
+      body.insertBefore(svgDom, body.firstChild)
+    }
+    else {
+      body.insertBefore(svgDom, body.lastChild)
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadSvg)
+  }
+  else {
+    ${executors}
+  }
+}
   `
 }
 
-function domInject(inject: DomInject = 'body-last') {
-  switch (inject) {
-    case 'body-first':
-      return 'body.insertBefore(svgDom, body.firstChild);'
-    default:
-      return 'body.insertBefore(svgDom, body.lastChild);'
-  }
-}
-
-export async function createDtsFile(names: string[], options: PluginOptions) {
-  let { dts = true } = options
-
+export async function createDtsFile(names: string[], dts: string | boolean = DEFAULT_DTS_GEN_PATH) {
   if (!dts || !names || !names?.length)
     return
 
-  dts = typeof dts === 'boolean' ? '.' : dts
+  dts = typeof dts === 'boolean' ? DEFAULT_DTS_GEN_PATH : dts
 
   const code = `declare module 'virtual:register-svg-icons' {\n  const component: object\n  export default component\n}\n\ndeclare module 'virtual:svg-icons-names' {\n  export type ${NAMES_TYPE_NAME} = ${names.map(name => `'${name}'`).join(' | ')}\n\n  const iconsNames: ${NAMES_TYPE_NAME}[]\n  export default iconsNames\n}
   `
-
   await writeFile(dts, code, 'utf-8')
 }
 
-export function parseSVGContent(content: string): ParsedSVGContent | undefined {
-  // Split SVG attributes and body
-  const match = content
-    .trim()
-    .match(
-      /(?:<(?:\?xml|!DOCTYPE)[^>]+>\s*)*<svg([^>]+)>([\s\S]+)<\/svg[^>]*>/,
-    )
-  if (!match) {
-    return
-  }
-  const body = match[2].trim()
+// export function parseSVGContent(content: string): ParsedSVGContent | undefined {
+//   // Split SVG attributes and body
+//   const match = content
+//     .trim()
+//     .match(
+//       /(?:<(?:\?xml|!DOCTYPE)[^>]+>\s*)*<svg([^>]+)>([\s\S]+)<\/svg[^>]*>/,
+//     )
+//   if (!match) {
+//     return
+//   }
+//   const body = match[2].trim()
 
-  // Split attributes
-  const attribsList = match[1].match(/[\w:-]+="[^"]*"/g)
-  const attribs = Object.create(null) as Record<string, string>
-  attribsList?.forEach((row) => {
-    const match = row.match(/([\w:-]+)="([^"]*)"/)
-    if (match) {
-      attribs[match[1]] = match[2]
-    }
-  })
+//   // Split attributes
+//   const attribsList = match[1].match(/[\w:-]+="[^"]*"/g)
+//   const attribs = Object.create(null) as Record<string, string>
+//   attribsList?.forEach((row) => {
+//     const match = row.match(/([\w:-]+)="([^"]*)"/)
+//     if (match) {
+//       attribs[match[1]] = match[2]
+//     }
+//   })
 
-  return {
-    attribs,
-    body,
-  }
-}
+//   return {
+//     attribs,
+//     body,
+//   }
+// }

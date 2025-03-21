@@ -1,11 +1,11 @@
 import type { Config } from 'svgo'
 
-export interface PluginOptions {
+export interface PluginOption {
 
   /**
    * @description read icon dir path
    */
-  iconDirs?: string[] | string
+  iconDirs?: string | string[]
 
   /**
    * @description symbolId Naming convention
@@ -26,12 +26,6 @@ export interface PluginOptions {
   customDomId?: string
 
   /**
-   * @description dts file name && write file path
-   * @default ./svg-icon.d.ts
-   */
-  dts?: string | boolean
-
-  /**
    * @description svgo configuration
    * @default - By default, id class in svg is prefixed with symbolId;
    */
@@ -47,7 +41,7 @@ export interface FileStats {
   symbolId?: string
 }
 
-export interface ParsedSVGContent {
-  attribs: Record<string, string>
-  body: string
+export interface ItemOptionResult {
+  symbols: string
+  names: string[]
 }
