@@ -1,13 +1,14 @@
 import type { ParsedSVGContent } from '@iconify/utils'
+import type { Recordable } from '@wry-smile/utils'
 import type { Config } from 'svgo'
 import type { ItemOptionResult, PluginOption } from './types'
 import { readFile, writeFile } from 'node:fs/promises'
 import { extname } from 'node:path'
 import { parseSVGContent } from '@iconify/utils'
-import { isArray, randomHexString } from '@wry-smile/utils'
+import { isArray, isBoolean, isDef } from '@wry-smile/utils'
 import fg from 'fast-glob'
 import { optimize } from 'svgo'
-import { DEFAULT_DTS_GEN_PATH, NAMES_TYPE_NAME, SVG_DOM_ID, XMLNS, XMLNS_LINK } from './constant'
+import { DEFAULT_DTS_GEN_PATH, DefaultOptions, NAMES_TYPE_NAME, SVG_DOM_ID, XMLNS, XMLNS_LINK } from './constant'
 import { error } from './utils'
 
 const cache = new Map<string, Record<'symbol' | 'symbolId', string>>()
@@ -106,6 +107,23 @@ async function complierIcon(file: string, symbolId: string, options: PluginOptio
 
   let content = await readFile(file, 'utf-8')
 
+  content = complierUseSvgo(content, symbolId, options)
+
+  const parser = parseSVGContent(content)
+
+  if (!parser) {
+    error(`Can't transform ${file}`)
+  }
+
+  return transformToSvgSymbol(symbolId, parser!, options.addAttributeToSVGElement)
+}
+
+function complierUseSvgo(content: string, symbolId: string, options: PluginOption) {
+  const { svgo: svgConfig } = options
+
+  if (isBoolean(svgConfig) && !svgConfig)
+    return content
+
   let defaultConfig: Config | undefined = {
     plugins: [
       {
@@ -116,34 +134,40 @@ async function complierIcon(file: string, symbolId: string, options: PluginOptio
           prefixClassNames: true,
         },
       },
+      {
+        name: 'preset-default',
+        params: {
+          overrides: {
+            removeViewBox: false,
+          },
+        },
+      },
     ],
   }
 
-  if (typeof svgConfig === 'boolean') {
-    if (!svgConfig) {
-      defaultConfig = undefined
-    }
-  }
-  else {
-    if (typeof svgConfig === 'object') {
-      defaultConfig = svgConfig
-    }
+  if (typeof svgConfig === 'object') {
+    defaultConfig = svgConfig
   }
 
-  content = optimize(content, defaultConfig).data
-
-  const parser = parseSVGContent(content)
-
-  if (!parser) {
-    error(`Can't transform ${file}`)
-  }
-
-  return transformToSvgSymbol(symbolId, parser!)
+  return optimize(content, defaultConfig).data
 }
 
-function transformToSvgSymbol(symbolId: string, parser: ParsedSVGContent) {
-  const { body, attribs: { viewBox = '0 0 24 24' } } = parser
-  return `<symbol id="${symbolId}" viewBox="${viewBox}">${body}</symbol>`
+function transformToSvgSymbol(symbolId: string, parser: ParsedSVGContent, appendAttr?: Recordable) {
+  const { body } = parser
+  let { attribs: { viewBox, width, height } } = parser
+  appendAttr = appendAttr || DefaultOptions.addAttributeToSVGElement
+
+  if (!viewBox) {
+    viewBox = `0 0 ${width || 24} ${height || 24}`
+  }
+
+  const attributes = Object.entries(appendAttr || {}).reduce((prev, [key, value]) => {
+    if (isDef(key) && isDef(value))
+      prev += ` ${key}="${value}"`
+    return prev
+  }, '')
+
+  return `<symbol id="${symbolId}" ${attributes} viewBox="${viewBox}">${body}</symbol>`
 }
 
 function createSymbolId(name: string, { symbolId }: PluginOption) {

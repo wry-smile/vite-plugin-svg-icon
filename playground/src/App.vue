@@ -1,14 +1,14 @@
 <script lang="ts" setup>
-import iconsNames, { type SvgIconSymbolType } from 'virtual:svg-icons-names';
+import type { SvgIconSymbolType } from 'virtual:svg-icons-names'
+import iconsNames from 'virtual:svg-icons-names'
 
-const icons: SvgIconSymbolType[] =iconsNames
- </script>
+const icons: SvgIconSymbolType[] = iconsNames
+</script>
 
-<template>  
+<template>
   <template v-for="icon in icons" :key="icon">
-    <svg style="color: red; fill: red;"> 
-      <use :xlink:href="`#${icon}`" ></use>
+    <svg style="color: red;">
+      <use :xlink:href="`#${icon}`" />
     </svg>
   </template>
-</template> 
- 
+</template>

@@ -14,4 +14,5 @@ export const DefaultOptions: PluginOption = {
   symbolId: 'icon-[dir]-[name]',
   inject: 'body-last',
   customDomId: SVG_DOM_ID,
+  addAttributeToSVGElement: { fill: 'currentColor' },
 }

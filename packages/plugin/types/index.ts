@@ -1,3 +1,4 @@
+import type { Recordable } from '@wry-smile/utils'
 import type { Config } from 'svgo'
 
 export interface PluginOption {
@@ -30,6 +31,12 @@ export interface PluginOption {
    * @default - By default, id class in svg is prefixed with symbolId;
    */
   svgo?: boolean | Config
+
+  /**
+   * @description Add attribute to symbol
+   * @default - {fill: "currentColor"}
+   */
+  addAttributeToSVGElement?: Recordable
 }
 
 export type DomInject = 'body-last' | 'body-first'
